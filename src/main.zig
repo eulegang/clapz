@@ -1,19 +1,18 @@
 const std = @import("std");
 const builder = @import("builder.zig");
 const conf = @import("conf.zig");
-const help = @import("help.zig");
 
 const Type = std.builtin.Type;
 const Opt = conf.Opt;
 
 pub const Error = builder.Error;
-pub const Meta = help.Meta;
+pub const Meta = conf.Meta;
 
 pub fn Parser(comptime T: type, comptime meta: Meta, comptime opts: Opt(T)) type {
     const Builder = builder.Builder(T, opts);
     return struct {
         const Self = @This();
-        pub const Doc = help.gen_help(T, meta, opts);
+        pub const Doc = conf.gen_help(T, meta, opts);
 
         alloc: std.mem.Allocator,
 
