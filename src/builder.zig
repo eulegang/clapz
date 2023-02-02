@@ -24,6 +24,7 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
         acc: Acc,
         state: State,
         fused: bool,
+        alloc: std.mem.Allocator,
         bare: ArrayList([]const u8),
         conf: C,
 
@@ -34,7 +35,24 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
                 .fused = false,
                 .bare = ArrayList([]const u8).init(alloc),
                 .conf = C.init(opt),
+                .alloc = alloc,
             };
+        }
+
+        pub fn bootstrap_env(self: *Self) Error!void {
+            var env_map = try std.process.getEnvMap(self.alloc);
+            // Intential leak
+            // defer env_map.deinit();
+
+            inline for (@typeInfo(@TypeOf(opt)).Struct.fields, 1..) |field, i| {
+                if (@field(opt, field.name).env) |env| {
+                    if (env_map.get(env)) |value| {
+                        const state: State = @enumFromInt(i);
+
+                        try self.acc.set(state, value);
+                    }
+                }
+            }
         }
 
         pub fn visit(self: *Self, arg: []const u8) Error!void {

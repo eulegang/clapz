@@ -6,3 +6,4 @@ usingnamespace @import("custom.zig");
 usingnamespace @import("enums.zig");
 usingnamespace @import("union.zig");
 usingnamespace @import("int.zig");
+usingnamespace @import("env.zig");

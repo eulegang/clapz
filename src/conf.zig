@@ -13,6 +13,7 @@ pub const OptMeta = struct {
     long: ?[]const u8 = null,
     short: ?u8 = null,
     doc: ?[]const u8 = null,
+    env: ?[]const u8 = null,
 };
 
 pub fn Conf(comptime T: type, comptime State: type) type {
