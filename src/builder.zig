@@ -95,9 +95,7 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
 
             inline for (struct_def.fields, 1..) |field, i| {
                 if (st_val == i) {
-                    const res = field.type == bool;
-
-                    return res;
+                    return field.type == bool;
                 }
             }
             return false;
@@ -287,10 +285,10 @@ fn StateOf(comptime opt: anytype) type {
         .value = 0,
     };
 
-    for (struct_def.fields, 0..) |field, i| {
-        states[i + 1] = Type.EnumField{
+    for (struct_def.fields, 1..) |field, i| {
+        states[i] = Type.EnumField{
             .name = field.name,
-            .value = i + 1,
+            .value = i,
         };
     }
 

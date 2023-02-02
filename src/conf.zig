@@ -21,7 +21,7 @@ pub fn Conf(comptime T: type, comptime State: type) type {
             const struct_def = @typeInfo(T).Struct;
 
             inline for (struct_def.fields, 1..) |field, i| {
-                if (@field(opt, field.name).short) |short| {
+                if (@field(T, field.name).short) |short| {
                     if (short == flag) {
                         return @enumFromInt(i);
                     }
@@ -32,11 +32,11 @@ pub fn Conf(comptime T: type, comptime State: type) type {
         }
 
         fn long_lookup(flag: []const u8) ?State {
-            const struct_def = @typeInfo(@TypeOf(opt)).Struct;
+            const struct_def = @typeInfo(@TypeOf(T)).Struct;
 
-            inline for (struct_def.fields, 0..) |field, i| {
-                if (std.mem.eql(u8, @field(opt, field.name).long, flag)) {
-                    return @enumFromInt(i + 1);
+            inline for (struct_def.fields, 1..) |field, i| {
+                if (std.mem.eql(u8, @field(T, field.name).long, flag)) {
+                    return @enumFromInt(i);
                 }
             }
 
@@ -70,59 +70,3 @@ pub fn Opt(comptime T: type) type {
         else => @compileError("Cannot support options for type `" ++ @typeName(T) ++ "`"),
     }
 }
-
-const opt = struct {
-    ty: type,
-
-    fn gen(comptime field: Type.StructField) @This() {
-        var long = Type.StructField{
-            .name = "long",
-            .type = []const u8,
-            .is_comptime = true,
-            .alignment = 8,
-            .default_value = @ptrCast(&field.name),
-        };
-
-        var short = Type.StructField{
-            .name = "short",
-            .type = u8,
-            .is_comptime = true,
-            .alignment = 1,
-            .default_value = &field.name[0],
-        };
-
-        var bare = Type.StructField{
-            .name = "bare",
-            .type = bool,
-            .is_comptime = true,
-            .alignment = 1,
-            .default_value = &false,
-        };
-
-        var doc = Type.StructField{
-            .name = "doc",
-            .type = []const u8,
-            .is_comptime = false,
-            .alignment = 8,
-            .default_value = null,
-        };
-
-        var ty = @Type(Type{
-            .Struct = Type.Struct{
-                .layout = .Auto,
-                .decls = &.{},
-                .fields = &.{
-                    long,
-                    short,
-                    bare,
-                    doc,
-                },
-                .is_tuple = false,
-            },
-        });
-
-        return opt{
-            .ty = ty,
-        };
-    }
-};
