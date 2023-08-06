@@ -7,8 +7,10 @@ const Opt = struct {
     output: ?[]const u8,
 };
 
-const Parser = clapz.Parser(Opt, .{
-    .output = .{},
+const Parser = clapz.Parser(Opt, .{}, .{
+    .output = .{
+        .doc = "output to file",
+    },
 });
 
 test "opt parser with option" {

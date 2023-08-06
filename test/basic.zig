@@ -8,9 +8,9 @@ const Basic = struct {
     output: []const u8,
 };
 
-const BasicParser = clapz.Parser(Basic, .{
-    .input = .{},
-    .output = .{},
+const BasicParser = clapz.Parser(Basic, .{}, .{
+    .input = .{ .doc = "input to program" },
+    .output = .{ .doc = "output from program" },
 });
 
 test "basic good case" {

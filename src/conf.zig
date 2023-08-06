@@ -2,11 +2,17 @@ const std = @import("std");
 
 const Type = std.builtin.Type;
 
+pub const Meta = struct {
+    name: []const u8 = "name",
+    version: []const u8 = "0.1.0",
+    desc: []const u8 = "basic description",
+    author: []const u8 = "yourname",
+};
+
 pub fn Opt(comptime T: type) type {
     switch (@typeInfo(T)) {
         .Struct => |s| {
             comptime var fields: [s.fields.len]Type.StructField = undefined;
-
             for (s.fields, 0..) |field, i| {
                 const o = opt.gen(field);
                 const ty = o.ty;
@@ -60,6 +66,14 @@ const opt = struct {
             .default_value = &false,
         };
 
+        var doc = Type.StructField{
+            .name = "doc",
+            .type = []const u8,
+            .is_comptime = false,
+            .alignment = 8,
+            .default_value = null,
+        };
+
         var ty = @Type(Type{
             .Struct = Type.Struct{
                 .layout = .Auto,
@@ -68,6 +82,7 @@ const opt = struct {
                     long,
                     short,
                     bare,
+                    doc,
                 },
                 .is_tuple = false,
             },

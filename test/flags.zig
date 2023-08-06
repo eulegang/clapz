@@ -7,7 +7,7 @@ const Flag = struct {
     verbose: bool,
 };
 
-const Parser = clapz.Parser(Flag, .{ .verbose = .{} });
+const Parser = clapz.Parser(Flag, .{}, .{ .verbose = .{ .doc = "output more output" } });
 
 test "parse flag" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
