@@ -24,6 +24,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const mod = b.addModule("clapz", .{
+        .source_file = .{ .path = "src/main.zig" },
+    });
+
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
     // running `zig build`).
@@ -37,11 +41,21 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const int_tests = b.addTest(.{
+        .root_source_file = .{ .path = "test/main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+
+    int_tests.addModule("clapz", mod);
+
     const run_main_tests = b.addRunArtifact(main_tests);
+    const run_int_tests = b.addRunArtifact(int_tests);
 
     // This creates a build step. It will be visible in the `zig build --help` menu,
     // and can be selected like this: `zig build test`
     // This will evaluate the `test` step rather than the default, which is "install".
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&run_main_tests.step);
+    test_step.dependOn(&run_int_tests.step);
 }
