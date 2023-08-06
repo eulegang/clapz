@@ -6,6 +6,7 @@ const ArrayList = std.ArrayList;
 pub const Error = error{
     MissingArg,
     InvalidArg,
+    ArgParse,
     ShowHelp,
 } || std.mem.Allocator.Error;
 
@@ -38,7 +39,7 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
         pub fn visit(self: *Self, arg: []const u8) Error!void {
             if (!self.fused) {
                 if (self.state != blank) {
-                    self.acc.set(self.state, arg);
+                    try self.acc.set(self.state, arg);
                     self.state = blank;
                 } else if (std.mem.eql(u8, arg, "--")) {
                     self.fused = true;
@@ -153,13 +154,24 @@ fn accumulator(comptime T: type, comptime State: type) type {
             return Self{ .inner = nulledOut(Inner) };
         }
 
-        pub fn set(self: *Self, state: State, arg: []const u8) void {
+        pub fn set(self: *Self, state: State, arg: []const u8) !void {
             if (@intFromEnum(state) == 0) unreachable;
 
             inline for (struct_def.fields, 1..) |field, i| {
                 if (@intFromEnum(state) == i) {
                     switch (@typeInfo(field.type)) {
                         .Bool => {},
+                        .Struct => {
+                            if (@hasDecl(field.type, "parse")) {
+                                if (field.type.parse(arg)) |val| {
+                                    @field(self.inner, field.name) = val;
+                                } else {
+                                    return Error.ArgParse;
+                                }
+                            } else {
+                                @compileError("expected `" ++ @typeName(field.type) ++ "` to implement `parse`");
+                            }
+                        },
 
                         else => {
                             @field(self.inner, field.name) = arg;
