@@ -29,3 +29,19 @@ test "parse flag" {
         \\
     );
 }
+
+test "parse does throw show help error" {
+    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer alloc.deinit();
+
+    _ = Parser.parse(&.{
+        "dd",
+        "-h",
+    }, alloc.allocator()) catch |err| {
+        try testing.expectEqual(clapz.Error.ShowHelp, err);
+
+        return;
+    };
+
+    try testing.expect(false);
+}

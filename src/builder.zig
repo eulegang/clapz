@@ -6,6 +6,7 @@ const ArrayList = std.ArrayList;
 pub const Error = error{
     MissingArg,
     InvalidArg,
+    ShowHelp,
 } || std.mem.Allocator.Error;
 
 pub fn Builder(comptime T: type, comptime opt: anytype) type {
@@ -41,6 +42,8 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
                     self.state = blank;
                 } else if (std.mem.eql(u8, arg, "--")) {
                     self.fused = true;
+                } else if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
+                    return Error.ShowHelp;
                 } else if (arg.len > 0 and arg[0] == '-') {
                     try self.accept_arg(arg);
                 } else {

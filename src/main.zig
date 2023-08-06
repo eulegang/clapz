@@ -25,7 +25,14 @@ pub fn Parser(comptime T: type, comptime meta: Meta, comptime opts: Opt(T)) type
         }
 
         pub fn parse_args() T {
-            const res = parse(.{}) catch {
+            const res = parse(.{}) catch |err| {
+                if (err == Error.ShowHelp) {
+                    const stdout = std.io.getStdOut();
+
+                    stdout.print("{}", Doc);
+                    std.os.exit(0);
+                }
+
                 std.os.exit(1);
             };
 
