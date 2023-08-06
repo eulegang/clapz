@@ -9,6 +9,7 @@ pub const Error = error{
 } || std.mem.Allocator.Error;
 
 pub fn Builder(comptime T: type, comptime opt: anytype) type {
+    const struct_def = @typeInfo(T).Struct;
     const State = StateOf(opt);
     const Acc = accumulator(T, State);
 
@@ -60,15 +61,38 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
             if (arg.len < 2) return Error.InvalidArg;
             var long = arg[1] == '-';
 
+            var state = blank;
+
             if (!long) {
-                self.state = state_short_lookup(opt, State, arg[1]) orelse {
+                state = state_short_lookup(opt, State, arg[1]) orelse {
                     return Error.InvalidArg;
                 };
             } else {
-                self.state = state_long_lookup(opt, State, arg[2..]) orelse {
+                state = state_long_lookup(opt, State, arg[2..]) orelse {
                     return Error.InvalidArg;
                 };
             }
+
+            if (!is_bool(state)) {
+                self.state = state;
+            } else {
+                self.acc.set_flag(state);
+            }
+        }
+
+        fn is_bool(state: State) bool {
+            const st_val = @intFromEnum(state);
+            if (st_val == 0)
+                return false;
+
+            inline for (struct_def.fields, 1..) |field, i| {
+                if (st_val == i) {
+                    const res = field.type == bool;
+
+                    return res;
+                }
+            }
+            return false;
         }
     };
 }
@@ -82,6 +106,16 @@ fn accumulator(comptime T: type, comptime State: type) type {
         switch (@typeInfo(field.type)) {
             .Optional => {
                 fields[i] = field;
+            },
+
+            .Bool => {
+                fields[i] = Type.StructField{
+                    .name = field.name,
+                    .type = bool,
+                    .is_comptime = field.is_comptime,
+                    .default_value = &false,
+                    .alignment = 8,
+                };
             },
 
             else => {
@@ -119,7 +153,29 @@ fn accumulator(comptime T: type, comptime State: type) type {
 
             inline for (struct_def.fields, 1..) |field, i| {
                 if (@intFromEnum(state) == i) {
-                    @field(self.inner, field.name) = arg;
+                    switch (@typeInfo(field.type)) {
+                        .Bool => {},
+
+                        else => {
+                            @field(self.inner, field.name) = arg;
+                        },
+                    }
+                }
+            }
+        }
+
+        pub fn set_flag(self: *Self, state: State) void {
+            if (@intFromEnum(state) == 0) unreachable;
+
+            inline for (struct_def.fields, 1..) |field, i| {
+                if (@intFromEnum(state) == i) {
+                    switch (@typeInfo(field.type)) {
+                        .Bool => {
+                            @field(self.inner, field.name) = true;
+                        },
+
+                        else => {},
+                    }
                 }
             }
         }
@@ -131,6 +187,10 @@ fn accumulator(comptime T: type, comptime State: type) type {
                 const val = @field(self.inner, field.name);
                 switch (@typeInfo(field.type)) {
                     .Optional => {
+                        @field(res, field.name) = val;
+                    },
+
+                    .Bool => {
                         @field(res, field.name) = val;
                     },
 
@@ -203,7 +263,11 @@ fn nulledOut(comptime T: type) T {
     var res: T = undefined;
 
     inline for (@typeInfo(T).Struct.fields) |field| {
-        @field(res, field.name) = null;
+        if (field.type == bool) {
+            @field(res, field.name) = false;
+        } else {
+            @field(res, field.name) = null;
+        }
     }
 
     return res;
