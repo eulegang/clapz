@@ -18,12 +18,13 @@ const Parser = clapz.Parser(Opt, .{}, .{
 test "opt parser with enum" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
+    var parser = Parser.init(alloc.allocator());
 
-    var args: Opt = try Parser.parse(&.{
+    var args: Opt = try parser.parse(&.{
         "make",
         "-j",
         "5",
-    }, alloc.allocator());
+    });
 
     var out: u32 = 5;
 

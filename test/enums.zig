@@ -25,11 +25,13 @@ test "opt parser with enum" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
 
-    const basic = try Parser.parse(&.{
+    var parser = Parser.init(alloc.allocator());
+
+    const basic = try parser.parse(&.{
         "git",
         "-c",
         "auto",
-    }, alloc.allocator());
+    });
 
     try testing.expectEqual(Color.auto, basic.color);
 }

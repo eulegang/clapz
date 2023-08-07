@@ -46,10 +46,12 @@ test "parse does throw show help error" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
 
-    _ = Parser.parse(&.{
+    var parser = Parser.init(alloc.allocator());
+
+    _ = parser.parse(&.{
         "dd",
         "-h",
-    }, alloc.allocator()) catch |err| {
+    }) catch |err| {
         try testing.expectEqual(clapz.Error.ShowHelp, err);
 
         return;

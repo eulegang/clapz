@@ -31,12 +31,13 @@ const Parser = clapz.Parser(Opt, .{}, .{
 test "opt parser with custom union stdout" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
+    var parser = Parser.init(alloc.allocator());
 
-    const args = try Parser.parse(&.{
+    const args = try parser.parse(&.{
         "git",
         "-o",
         "-",
-    }, alloc.allocator());
+    });
 
     try testing.expectEqual(Output.stdout, args.out);
 }
@@ -44,12 +45,13 @@ test "opt parser with custom union stdout" {
 test "opt parser with custom union filename" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
+    var parser = Parser.init(alloc.allocator());
 
-    const args = try Parser.parse(&.{
+    const args = try parser.parse(&.{
         "git",
         "-o",
         "xyz.log",
-    }, alloc.allocator());
+    });
 
     switch (args.out) {
         .stdout => {

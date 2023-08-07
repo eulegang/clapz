@@ -25,13 +25,15 @@ test "basic good case" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
 
-    const basic = try BasicParser.parse(&.{
+    var parser = BasicParser.init(alloc.allocator());
+
+    const basic = try parser.parse(&.{
         "dd",
         "-i",
         "xyz",
         "-o",
         "abc",
-    }, alloc.allocator());
+    });
 
     try testing.expectEqual(Basic{
         .input = "xyz",
@@ -42,12 +44,13 @@ test "basic good case" {
 test "basic missing param" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
+    var parser = BasicParser.init(alloc.allocator());
 
-    _ = BasicParser.parse(&.{
+    _ = parser.parse(&.{
         "dd",
         "-i",
         "xyz",
-    }, alloc.allocator()) catch |err| {
+    }) catch |err| {
         try testing.expectEqual(clapz.Error.MissingArg, err);
 
         return;
@@ -59,11 +62,12 @@ test "basic missing param" {
 test "basic incomplete param" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
+    var parser = BasicParser.init(alloc.allocator());
 
-    _ = BasicParser.parse(&.{
+    _ = parser.parse(&.{
         "dd",
         "-i",
-    }, alloc.allocator()) catch |err| {
+    }) catch |err| {
         try testing.expectEqual(clapz.Error.MissingArg, err);
 
         return;

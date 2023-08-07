@@ -57,11 +57,13 @@ test "opt parser with custom" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
 
-    const basic = try Parser.parse(&.{
+    var parser = Parser.init(alloc.allocator());
+
+    const basic = try parser.parse(&.{
         "git",
         "-r",
         "HEAD..master",
-    }, alloc.allocator());
+    });
 
     try testing.expectEqualStrings("HEAD", basic.range.start);
     try testing.expectEqualStrings("master", basic.range.end);
@@ -71,11 +73,13 @@ test "opt parser with failed custom" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
 
-    _ = Parser.parse(&.{
+    var parser = Parser.init(alloc.allocator());
+
+    _ = parser.parse(&.{
         "git",
         "-r",
         "HEAD",
-    }, alloc.allocator()) catch |err| {
+    }) catch |err| {
         try testing.expectEqual(clapz.Error.ArgParse, err);
         return;
     };

@@ -19,10 +19,12 @@ test "parse flag" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
 
-    const basic = try Parser.parse(&.{
+    var parser = Parser.init(alloc.allocator());
+
+    const basic = try parser.parse(&.{
         "dd",
         "-v",
-    }, alloc.allocator());
+    });
 
     try testing.expectEqual(Flag{
         .verbose = true,
@@ -33,9 +35,11 @@ test "parse flag default" {
     var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer alloc.deinit();
 
-    const basic = try Parser.parse(&.{
+    var parser = Parser.init(alloc.allocator());
+
+    const basic = try parser.parse(&.{
         "dd",
-    }, alloc.allocator());
+    });
 
     try testing.expectEqual(Flag{
         .verbose = false,
