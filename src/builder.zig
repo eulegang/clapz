@@ -192,6 +192,19 @@ fn accumulator(comptime T: type, comptime State: type) type {
                                 }
                             }
                         },
+
+                        .Union => {
+                            if (@hasDecl(field.type, "parse")) {
+                                if (field.type.parse(arg)) |val| {
+                                    @field(self.inner, field.name) = val;
+                                } else {
+                                    return Error.ArgParse;
+                                }
+                            } else {
+                                @compileError("expected `" ++ @typeName(field.type) ++ "` to implement `parse`");
+                            }
+                        },
+
                         .Struct => {
                             if (@hasDecl(field.type, "parse")) {
                                 if (field.type.parse(arg)) |val| {
