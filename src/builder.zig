@@ -161,6 +161,23 @@ fn accumulator(comptime T: type, comptime State: type) type {
                 if (@intFromEnum(state) == i) {
                     switch (@typeInfo(field.type)) {
                         .Bool => {},
+                        .Enum => |e| {
+                            if (@hasDecl(field.type, "parse")) {
+                                if (field.type.parse(arg)) |val| {
+                                    @field(self.inner, field.name) = val;
+                                } else {
+                                    return Error.ArgParse;
+                                }
+                            } else {
+                                inline for (e.fields) |ef| {
+                                    if (std.mem.eql(u8, ef.name, arg)) {
+                                        @field(self.inner, field.name) = @enumFromInt(ef.value);
+
+                                        break;
+                                    }
+                                }
+                            }
+                        },
                         .Struct => {
                             if (@hasDecl(field.type, "parse")) {
                                 if (field.type.parse(arg)) |val| {
