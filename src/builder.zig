@@ -20,8 +20,6 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
     return struct {
         const Self = @This();
 
-        const Doc = gen_doc(opt);
-
         acc: Acc,
         state: State,
         fused: bool,
@@ -302,17 +300,6 @@ fn nulledOut(comptime T: type) T {
         } else {
             @field(res, field.name) = null;
         }
-    }
-
-    return res;
-}
-
-fn gen_doc(comptime opt: anytype) []const u8 {
-    const struct_def = @typeInfo(@TypeOf(opt)).Struct;
-    comptime var res = "";
-
-    for (struct_def.field) |field| {
-        res = res ++ @field(opt, field.name).doc;
     }
 
     return res;
