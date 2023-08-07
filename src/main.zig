@@ -34,7 +34,15 @@ pub fn Parser(comptime T: type, comptime meta: Meta, comptime opts: Opt(T)) type
         }
 
         pub fn parse_args(self: *Self) T {
-            const res = self.parse(.{}) catch |err| {
+            var acc = std.ArrayList([]const u8).init(self.alloc);
+            // intentionally leaked
+
+            var args = std.process.args();
+            while (args.next()) |arg| {
+                try acc.append(arg);
+            }
+
+            const res = self.parse(acc.items) catch |err| {
                 if (err == Error.ShowHelp) {
                     const stdout = std.io.getStdOut();
 
