@@ -26,7 +26,7 @@ pub fn Parser(comptime T: type, comptime meta: Meta, comptime opts: Opt(T)) type
         pub fn parse(self: *Self, args: []const []const u8) Error!T {
             var b = Builder.init(self.alloc);
 
-            for (args) |arg| {
+            for (args[1..]) |arg| {
                 try b.visit(arg);
             }
 
