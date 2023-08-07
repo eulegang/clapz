@@ -15,9 +15,21 @@ const Parser = clapz.Parser(Args, .{
     .desc = "saves some file type",
     .author = "xyz",
 }, .{
-    .input = .{ .doc = "read file" },
-    .output = .{ .doc = "save output" },
-    .verbose = .{ .doc = "say more" },
+    .input = .{
+        .short = 'i',
+        .long = "input",
+        .doc = "read file",
+    },
+    .output = .{
+        .short = 'o',
+        .long = "output",
+        .doc = "save output",
+    },
+    .verbose = .{
+        .short = 'v',
+        .long = "verbose",
+        .doc = "say more",
+    },
 });
 
 test "parse flag" {

@@ -9,20 +9,53 @@ pub const Meta = struct {
     author: []const u8 = "yourname",
 };
 
+pub const OptMeta = struct {
+    long: ?[]const u8 = null,
+    short: ?u8 = null,
+    doc: ?[]const u8 = null,
+};
+
+pub fn Conf(comptime T: type, comptime State: type) type {
+    return struct {
+        fn short_lookup(flag: u8) ?State {
+            const struct_def = @typeInfo(T).Struct;
+
+            inline for (struct_def.fields, 1..) |field, i| {
+                if (@field(opt, field.name).short) |short| {
+                    if (short == flag) {
+                        return @enumFromInt(i);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        fn long_lookup(flag: []const u8) ?State {
+            const struct_def = @typeInfo(@TypeOf(opt)).Struct;
+
+            inline for (struct_def.fields, 0..) |field, i| {
+                if (std.mem.eql(u8, @field(opt, field.name).long, flag)) {
+                    return @enumFromInt(i + 1);
+                }
+            }
+
+            return null;
+        }
+    };
+}
+
 pub fn Opt(comptime T: type) type {
     switch (@typeInfo(T)) {
         .Struct => |s| {
             comptime var fields: [s.fields.len]Type.StructField = undefined;
             for (s.fields, 0..) |field, i| {
-                const o = opt.gen(field);
-                const ty = o.ty;
-
                 fields[i] = Type.StructField{
                     .default_value = null,
                     .alignment = 8,
                     .is_comptime = false,
                     .name = field.name,
-                    .type = ty,
+                    .type = OptMeta,
                 };
             }
 

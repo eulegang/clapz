@@ -15,6 +15,8 @@ const Opt = struct {
 
 const Parser = clapz.Parser(Opt, .{}, .{
     .color = .{
+        .short = 'c',
+        .long = "color",
         .doc = "color option",
     },
 });

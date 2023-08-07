@@ -9,6 +9,8 @@ const Opt = struct {
 
 const Parser = clapz.Parser(Opt, .{}, .{
     .output = .{
+        .short = 'o',
+        .long = "output",
         .doc = "output to file",
     },
 });

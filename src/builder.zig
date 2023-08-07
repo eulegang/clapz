@@ -14,6 +14,7 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
     const struct_def = @typeInfo(T).Struct;
     const State = StateOf(opt);
     const Acc = accumulator(T, State);
+    const C = Conf(@TypeOf(opt), State);
 
     const blank: State = @enumFromInt(0);
 
@@ -24,6 +25,7 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
         state: State,
         fused: bool,
         bare: ArrayList([]const u8),
+        conf: C,
 
         pub fn init(alloc: std.mem.Allocator) Self {
             return Self{
@@ -31,6 +33,7 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
                 .state = blank,
                 .fused = false,
                 .bare = ArrayList([]const u8).init(alloc),
+                .conf = C.init(opt),
             };
         }
 
@@ -68,11 +71,12 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
             var state = blank;
 
             if (!long) {
-                state = state_short_lookup(opt, State, arg[1]) orelse {
+                state = self.conf.short_lookup(arg[1]) orelse {
+                    std.debug.print("invalid arg found {s}\n", .{arg});
                     return Error.InvalidArg;
                 };
             } else {
-                state = state_long_lookup(opt, State, arg[2..]) orelse {
+                state = self.conf.long_lookup(arg[2..]) orelse {
                     return Error.InvalidArg;
                 };
             }
@@ -279,26 +283,39 @@ fn StateOf(comptime opt: anytype) type {
     });
 }
 
-fn state_short_lookup(comptime opt: anytype, comptime State: type, arg: u8) ?State {
-    const struct_def = @typeInfo(@TypeOf(opt)).Struct;
+pub fn Conf(comptime T: type, comptime State: type) type {
+    return struct {
+        const Self = @This();
+        const struct_def = @typeInfo(T).Struct;
 
-    inline for (struct_def.fields, 0..) |field, i| {
-        if (@field(opt, field.name).short == arg) {
-            return @enumFromInt(i + 1);
+        opt: T,
+
+        fn init(opt: T) Self {
+            return Self{ .opt = opt };
         }
-    }
 
-    return null;
-}
+        fn short_lookup(self: Self, flag: u8) ?State {
+            inline for (struct_def.fields, 1..) |field, i| {
+                if (@field(self.opt, field.name).short) |short| {
+                    if (short == flag) {
+                        return @enumFromInt(i);
+                    }
+                }
+            }
 
-fn state_long_lookup(comptime opt: anytype, comptime State: type, arg: []const u8) ?State {
-    const struct_def = @typeInfo(@TypeOf(opt)).Struct;
-
-    inline for (struct_def.fields, 0..) |field, i| {
-        if (std.mem.eql(u8, @field(opt, field.name).long, arg)) {
-            return @enumFromInt(i + 1);
+            return null;
         }
-    }
 
-    return null;
+        fn long_lookup(self: Self, flag: []const u8) ?State {
+            inline for (struct_def.fields, 1..) |field, i| {
+                if (@field(self.opt, field.name).long) |long| {
+                    if (std.mem.eql(u8, long, flag)) {
+                        return @enumFromInt(i);
+                    }
+                }
+            }
+
+            return null;
+        }
+    };
 }

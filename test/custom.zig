@@ -47,6 +47,8 @@ const Opt = struct {
 
 const Parser = clapz.Parser(Opt, .{}, .{
     .range = .{
+        .short = 'r',
+        .long = "range",
         .doc = "git range",
     },
 });
