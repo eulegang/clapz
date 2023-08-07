@@ -149,7 +149,19 @@ fn accumulator(comptime T: type, comptime State: type) type {
         inner: Inner,
 
         pub fn init() Self {
-            return Self{ .inner = nulledOut(Inner) };
+            var inner: Inner = undefined;
+
+            inline for (@typeInfo(T).Struct.fields) |field| {
+                if (field.type == bool) {
+                    @field(inner, field.name) = false;
+                } else {
+                    @field(inner, field.name) = null;
+                }
+            }
+
+            return Self{
+                .inner = inner,
+            };
         }
 
         pub fn set(self: *Self, state: State, arg: []const u8) !void {
@@ -289,18 +301,4 @@ fn state_long_lookup(comptime opt: anytype, comptime State: type, arg: []const u
     }
 
     return null;
-}
-
-fn nulledOut(comptime T: type) T {
-    var res: T = undefined;
-
-    inline for (@typeInfo(T).Struct.fields) |field| {
-        if (field.type == bool) {
-            @field(res, field.name) = false;
-        } else {
-            @field(res, field.name) = null;
-        }
-    }
-
-    return res;
 }
