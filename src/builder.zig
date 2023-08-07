@@ -193,6 +193,14 @@ fn accumulator(comptime T: type, comptime State: type) type {
                             }
                         },
 
+                        .Int => {
+                            const val = std.fmt.parseInt(field.type, arg, 10) catch {
+                                return Error.ArgParse;
+                            };
+
+                            @field(self.inner, field.name) = val;
+                        },
+
                         .Union => {
                             if (@hasDecl(field.type, "parse")) {
                                 if (field.type.parse(arg)) |val| {

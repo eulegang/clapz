@@ -5,3 +5,4 @@ usingnamespace @import("help.zig");
 usingnamespace @import("custom.zig");
 usingnamespace @import("enums.zig");
 usingnamespace @import("union.zig");
+usingnamespace @import("int.zig");
