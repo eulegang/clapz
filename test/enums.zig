@@ -22,10 +22,8 @@ const Parser = clapz.Parser(Opt, .{}, .{
 });
 
 test "opt parser with enum" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-
-    var parser = Parser.init(alloc.allocator());
+    var parser = try Parser.init(testing.allocator);
+    defer parser.deinit();
 
     const basic = try parser.parse(&.{
         "git",

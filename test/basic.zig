@@ -22,10 +22,8 @@ const BasicParser = clapz.Parser(Basic, .{}, .{
 });
 
 test "basic good case" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-
-    var parser = BasicParser.init(alloc.allocator());
+    var parser = try BasicParser.init(testing.allocator);
+    defer parser.deinit();
 
     const basic = try parser.parse(&.{
         "dd",
@@ -35,16 +33,13 @@ test "basic good case" {
         "abc",
     });
 
-    try testing.expectEqual(Basic{
-        .input = "xyz",
-        .output = "abc",
-    }, basic);
+    try testing.expectEqualStrings("xyz", basic.input);
+    try testing.expectEqualStrings("abc", basic.output);
 }
 
 test "basic missing param" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-    var parser = BasicParser.init(alloc.allocator());
+    var parser = try BasicParser.init(testing.allocator);
+    defer parser.deinit();
 
     _ = parser.parse(&.{
         "dd",
@@ -60,9 +55,8 @@ test "basic missing param" {
 }
 
 test "basic incomplete param" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-    var parser = BasicParser.init(alloc.allocator());
+    var parser = try BasicParser.init(testing.allocator);
+    defer parser.deinit();
 
     _ = parser.parse(&.{
         "dd",

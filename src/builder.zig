@@ -1,4 +1,5 @@
 const std = @import("std");
+const Bank = @import("bank.zig").Bank;
 
 const Type = std.builtin.Type;
 const ArrayList = std.ArrayList;
@@ -8,7 +9,7 @@ pub const Error = error{
     InvalidArg,
     ArgParse,
     ShowHelp,
-} || std.mem.Allocator.Error;
+} || std.mem.Allocator.Error || Bank.Error;
 
 pub fn Builder(comptime T: type, comptime opt: anytype) type {
     const struct_def = @typeInfo(T).Struct;
@@ -27,22 +28,29 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
         alloc: std.mem.Allocator,
         bare: ArrayList([]const u8),
         conf: C,
+        bank: Bank,
 
-        pub fn init(alloc: std.mem.Allocator) Self {
+        pub fn init(alloc: std.mem.Allocator) !Self {
+            var bank = try Bank.init(alloc);
+
             return Self{
-                .acc = Acc.init(),
+                .acc = Acc.init(bank),
                 .state = blank,
                 .fused = false,
                 .bare = ArrayList([]const u8).init(alloc),
                 .conf = C.init(opt),
                 .alloc = alloc,
+                .bank = bank,
             };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.bank.deinit();
         }
 
         pub fn bootstrap_env(self: *Self) Error!void {
             var env_map = try std.process.getEnvMap(self.alloc);
-            // Intential leak
-            // defer env_map.deinit();
+            defer env_map.deinit();
 
             inline for (@typeInfo(@TypeOf(opt)).Struct.fields, 1..) |field, i| {
                 if (@field(opt, field.name).env) |env| {
@@ -121,6 +129,30 @@ pub fn Builder(comptime T: type, comptime opt: anytype) type {
     };
 }
 
+fn store_type(comptime T: type) type {
+    switch (@typeInfo(T)) {
+        .Optional => |o| {
+            return store_type(o.child);
+        },
+
+        .Bool => {
+            return @Type(Type.Bool);
+        },
+
+        .Pointer => |ti| {
+            if (ti.size == .Slice and ti.child == u8) {
+                return Bank.Entry;
+            } else {
+                return @Type(Type{ .Optional = Type.Optional{ .child = T } });
+            }
+        },
+
+        else => {
+            return @Type(Type{ .Optional = Type.Optional{ .child = T } });
+        },
+    }
+}
+
 fn accumulator(comptime T: type, comptime State: type) type {
     const struct_def = @typeInfo(T).Struct;
 
@@ -129,25 +161,51 @@ fn accumulator(comptime T: type, comptime State: type) type {
     for (struct_def.fields, 0..) |field, i| {
         switch (@typeInfo(field.type)) {
             .Optional => {
-                fields[i] = field;
+                fields[i] = Type.StructField{
+                    .name = field.name,
+                    .type = store_type(field.type),
+                    .is_comptime = false,
+                    .default_value = null,
+                    .alignment = 8,
+                };
             },
 
             .Bool => {
                 fields[i] = Type.StructField{
                     .name = field.name,
                     .type = bool,
-                    .is_comptime = field.is_comptime,
+                    .is_comptime = false,
                     .default_value = &false,
                     .alignment = 8,
                 };
             },
 
+            .Pointer => |p| {
+                if (p.size == .Slice and p.child == u8) {
+                    fields[i] = Type.StructField{
+                        .name = field.name,
+                        .type = store_type(field.type),
+                        .alignment = 8,
+                        .is_comptime = false,
+                        .default_value = &Bank.Entry.default(),
+                    };
+                } else {
+                    fields[i] = Type.StructField{
+                        .name = field.name,
+                        .type = store_type(field.type),
+                        .alignment = field.alignment,
+                        .is_comptime = false,
+                        .default_value = null,
+                    };
+                }
+            },
+
             else => {
                 fields[i] = Type.StructField{
                     .name = field.name,
-                    .type = @Type(Type{ .Optional = Type.Optional{ .child = field.type } }),
+                    .type = store_type(field.type),
                     .alignment = field.alignment,
-                    .is_comptime = field.is_comptime,
+                    .is_comptime = false,
                     .default_value = null,
                 };
             },
@@ -167,13 +225,16 @@ fn accumulator(comptime T: type, comptime State: type) type {
         const Self = @This();
 
         inner: Inner,
+        bank: Bank,
 
-        pub fn init() Self {
+        pub fn init(bank: Bank) Self {
             var inner: Inner = undefined;
 
             inline for (@typeInfo(T).Struct.fields) |field| {
                 if (field.type == bool) {
                     @field(inner, field.name) = false;
+                } else if (@TypeOf(@field(inner, field.name)) == Bank.Entry) {
+                    @field(inner, field.name) = Bank.Entry.default();
                 } else {
                     @field(inner, field.name) = null;
                 }
@@ -181,6 +242,7 @@ fn accumulator(comptime T: type, comptime State: type) type {
 
             return Self{
                 .inner = inner,
+                .bank = bank,
             };
         }
 
@@ -242,7 +304,11 @@ fn accumulator(comptime T: type, comptime State: type) type {
                         },
 
                         else => {
-                            @field(self.inner, field.name) = arg;
+                            if (@TypeOf(@field(self.inner, field.name)) == Bank.Entry) {
+                                @field(self.inner, field.name) = try self.bank.record(arg);
+                            } else {
+                                @field(self.inner, field.name) = arg;
+                            }
                         },
                     }
                 }
@@ -270,22 +336,40 @@ fn accumulator(comptime T: type, comptime State: type) type {
 
             inline for (struct_def.fields) |field| {
                 const val = @field(self.inner, field.name);
-                switch (@typeInfo(field.type)) {
-                    .Optional => {
-                        @field(res, field.name) = val;
-                    },
 
-                    .Bool => {
-                        @field(res, field.name) = val;
-                    },
+                if (@TypeOf(val) == Bank.Entry) {
+                    const nullable = switch (@typeInfo(field.type)) {
+                        .Optional => true,
+                        else => false,
+                    };
 
-                    else => {
-                        if (val) |v| {
-                            @field(res, field.name) = v;
+                    if (val.is_empty()) {
+                        if (nullable) {
+                            @field(res, field.name) = null;
                         } else {
                             return Error.MissingArg;
                         }
-                    },
+                    } else {
+                        @field(res, field.name) = try self.bank.retrieve(val);
+                    }
+                } else {
+                    switch (@typeInfo(field.type)) {
+                        .Optional => {
+                            @field(res, field.name) = val;
+                        },
+
+                        .Bool => {
+                            @field(res, field.name) = val;
+                        },
+
+                        else => {
+                            if (val) |v| {
+                                @field(res, field.name) = v;
+                            } else {
+                                return Error.MissingArg;
+                            }
+                        },
+                    }
                 }
             }
 

@@ -15,23 +15,28 @@ pub fn Parser(comptime T: type, comptime meta: Meta, comptime opts: Opt(T)) type
         pub const Doc = conf.gen_help(T, meta, opts);
 
         alloc: std.mem.Allocator,
+        builder: Builder,
 
-        pub fn init(alloc: std.mem.Allocator) Self {
+        pub fn init(alloc: std.mem.Allocator) !Self {
+            var b = try Builder.init(alloc);
             return Self{
                 .alloc = alloc,
+                .builder = b,
             };
         }
 
-        pub fn parse(self: *Self, args: []const []const u8) Error!T {
-            var b = Builder.init(self.alloc);
+        pub fn deinit(self: *Self) void {
+            self.builder.deinit();
+        }
 
-            try b.bootstrap_env();
+        pub fn parse(self: *Self, args: []const []const u8) Error!T {
+            try self.builder.bootstrap_env();
 
             for (args[1..]) |arg| {
-                try b.visit(arg);
+                try self.builder.visit(arg);
             }
 
-            return b.finalize();
+            return self.builder.finalize();
         }
 
         pub fn parse_args(self: *Self) T {

@@ -43,10 +43,8 @@ test "parse flag" {
 }
 
 test "parse does throw show help error" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-
-    var parser = Parser.init(alloc.allocator());
+    var parser = try Parser.init(testing.allocator);
+    defer parser.deinit();
 
     _ = parser.parse(&.{
         "dd",

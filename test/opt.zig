@@ -16,10 +16,8 @@ const Parser = clapz.Parser(Opt, .{}, .{
 });
 
 test "opt parser with option" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-
-    var parser = Parser.init(alloc.allocator());
+    var parser = try Parser.init(testing.allocator);
+    defer parser.deinit();
 
     const basic = try parser.parse(&.{
         "dd",
@@ -27,22 +25,22 @@ test "opt parser with option" {
         "out.txt",
     });
 
-    try testing.expectEqual(Opt{
-        .output = "out.txt",
-    }, basic);
+    const out = basic.output orelse {
+        try testing.expect(false);
+        return;
+    };
+    try testing.expectEqualStrings("out.txt", out);
 }
 
 test "opt parser without option" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-
-    var parser = Parser.init(alloc.allocator());
+    var parser = try Parser.init(testing.allocator);
+    defer parser.deinit();
 
     const basic = try parser.parse(&.{
         "dd",
     });
 
-    try testing.expectEqual(Opt{
-        .output = null,
-    }, basic);
+    const out: ?[]const u8 = null;
+
+    try testing.expectEqual(out, basic.output);
 }

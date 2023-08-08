@@ -16,10 +16,8 @@ const Parser = clapz.Parser(Flag, .{}, .{
 });
 
 test "parse flag" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-
-    var parser = Parser.init(alloc.allocator());
+    var parser = try Parser.init(testing.allocator);
+    defer parser.deinit();
 
     const basic = try parser.parse(&.{
         "dd",
@@ -32,10 +30,8 @@ test "parse flag" {
 }
 
 test "parse flag default" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-
-    var parser = Parser.init(alloc.allocator());
+    var parser = try Parser.init(testing.allocator);
+    defer parser.deinit();
 
     const basic = try parser.parse(&.{
         "dd",

@@ -17,11 +17,11 @@ const Parser = clapz.Parser(Opt, .{}, .{
 });
 
 test "opt parser with env" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-    var parser = Parser.init(alloc.allocator());
+    var parser = try Parser.init(testing.allocator);
+    defer parser.deinit();
 
-    const user: []const u8 = try std.process.getEnvVarOwned(alloc.allocator(), "USER");
+    const user: []const u8 = try std.process.getEnvVarOwned(testing.allocator, "USER");
+    defer testing.allocator.free(user);
 
     var args: Opt = try parser.parse(&.{
         "git",

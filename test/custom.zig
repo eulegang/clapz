@@ -54,10 +54,8 @@ const Parser = clapz.Parser(Opt, .{}, .{
 });
 
 test "opt parser with custom" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-
-    var parser = Parser.init(alloc.allocator());
+    var parser = try Parser.init(testing.allocator);
+    defer parser.deinit();
 
     const basic = try parser.parse(&.{
         "git",
@@ -70,10 +68,8 @@ test "opt parser with custom" {
 }
 
 test "opt parser with failed custom" {
-    var alloc = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer alloc.deinit();
-
-    var parser = Parser.init(alloc.allocator());
+    var parser = try Parser.init(testing.allocator);
+    defer parser.deinit();
 
     _ = parser.parse(&.{
         "git",
