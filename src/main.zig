@@ -39,7 +39,7 @@ pub fn Parser(comptime T: type, comptime meta: Meta, comptime opts: Opt(T)) type
             return self.builder.finalize();
         }
 
-        pub fn parse_args(self: *Self) T {
+        pub fn parse_args(self: *Self) !T {
             var acc = std.ArrayList([]const u8).init(self.alloc);
             // intentionally leaked
 
@@ -50,9 +50,13 @@ pub fn Parser(comptime T: type, comptime meta: Meta, comptime opts: Opt(T)) type
 
             const res = self.parse(acc.items) catch |err| {
                 if (err == Error.ShowHelp) {
-                    const stdout = std.io.getStdOut();
+                    const stdout_file = std.io.getStdOut().writer();
+                    var bw = std.io.bufferedWriter(stdout_file);
+                    const stdout = bw.writer();
 
-                    stdout.print("{}", Doc);
+                    try stdout.print("{s}\n", .{Doc});
+
+                    try bw.flush();
                     std.os.exit(0);
                 }
 
